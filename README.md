@@ -32,6 +32,6 @@ from snapshots. Then it will scale your pods back up. In the end you should
 have fully restored namespace.
 
 
-[1] https://kubernetes.io/docs/concepts/storage/volume-snapshots/
-[2] https://github.com/FairwindsOps/gemini/
+[1] https://kubernetes.io/docs/concepts/storage/volume-snapshots/ \
+[2] https://github.com/FairwindsOps/gemini/ \
 [3] https://ports.macports.org/port/coreutils/
