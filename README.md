@@ -33,5 +33,5 @@ have fully restored namespace.
 
 
 [1] https://kubernetes.io/docs/concepts/storage/volume-snapshots/
-[2] https://github.com/FairwindsOps/gemini
+[2] https://github.com/FairwindsOps/gemini/
 [3] https://ports.macports.org/port/coreutils/
