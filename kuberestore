@@ -1,0 +1,176 @@
+#!/bin/bash
+#
+# Copyright (C) 2022 Andy Kosela <akosela@andykosela.com>
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301 USA.
+
+version=1.0
+
+usage()
+{
+  echo "usage: kuberestore -n namespace -s snapshot"
+}
+
+help()
+{
+  echo ""
+  echo "Restore all PVCs in namespace from snapshots"
+  echo ""
+  echo "  -n namespace    namespace"
+  echo "  -s snapshot     snapshot; 1 for the last, 2 for the 2nd to last, etc."
+  echo "  -h              display this help and exit"
+  echo "  -v              output version information and exit"
+}
+
+while getopts hn:s:v opts; do
+  case $opts in
+  h) usage; help; exit ;;
+  n) ns=$OPTARG ;;
+  s) snap=$OPTARG ;;
+  v) echo "kuberestore $version"; exit ;;
+  *) usage; exit 1 ;;
+  esac
+done
+
+if [ -z "$ns" ] || [ -z "$snap" ]; then
+  echo "$0: missing -n or -s parameters" >&2
+  usage
+  exit 1
+fi
+
+# Check what is installed
+echo "==> Gathering facts"
+
+if [ ! -z "$(kubectl get sts -n $ns 2>/dev/null)" ]; then
+  sts=1
+  declare -A replicas2
+else
+  sts=0
+fi
+
+if [ ! -z "$(kubectl get ds -n $ns 2>/dev/null)" ]; then
+  ds=1
+  declare -A replicas3
+else
+  ds=0
+fi
+
+# Store replicas for deployments, statefulsets and daemonsets
+declare -A replicas1
+
+for i in $(kubectl get deployment -o name -n $ns); do
+  replicas1+=( [$i]="$(kubectl get $i -n $ns -o=jsonpath='{.spec.replicas}')")
+done
+
+if [ "$sts" = 1 ]; then
+  for i in $(kubectl get sts -o name -n $ns); do
+    replicas2+=( [$i]="$(kubectl get $i -n $ns -o=jsonpath='{.spec.replicas}')")
+  done
+fi
+
+if [ "$ds" = 1 ]; then
+  for i in $(kubectl get ds -o name -n $ns); do
+    replicas3+=( [$i]="$(kubectl get $i -n $ns -o=jsonpath='{.spec.replicas}')")
+  done
+fi
+
+# Store pvc facts
+kgp="kubectl get pvc -o name -n $ns"
+
+for e in $($kgp); do
+  kubectl get $e -n $ns | grep -v NAME | awk '{print $1,$4,$5,$6}' >> /tmp/restore1.$$
+done
+
+old_ifs=$IFS
+IFS=$'\n'
+for e in $(cat /tmp/restore1.$$); do
+  i=$(kubectl get volumesnapshot -n $ns | grep $(echo $e | cut -d' ' -f1) |
+    tail -${snap} | head -1 | cut -d' ' -f1)
+  echo -n $e >> /tmp/restore2.$$
+  echo " $i" >> /tmp/restore2.$$
+done
+
+sed -i -e 's/RWO/ReadWriteOnce/' \
+       -e 's/RWX/ReadWriteMany/' \
+       -e 's/ROX/ReadOnlyMany/' /tmp/restore2.$$
+
+# Scale down
+echo "==> Scaling down"
+kubectl scale deployment --all --replicas=0 -n $ns
+
+if [ "$sts" = 1 ]; then
+  sleep 10
+  kubectl scale statefulset --all --replicas=0 -n $ns
+fi
+
+if [ "$ds" = 1 ]; then
+  kubectl scale daemonset --all --replicas=0 -n $ns
+fi
+
+kubectl wait --for=delete pod --all -n $ns --timeout=10m
+
+# Delete pvc's
+echo "==> Deleting PVCs"
+kubectl delete pvc --all -n $ns
+kubectl wait --for=delete pvc --all -n $ns --timeout=10m
+
+# Restore pvc's from snapshots
+echo "==> Restoring PVCs"
+
+for e in $(cat /tmp/restore2.$$); do
+  kubectl apply -f - <<EOF
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: $(echo $e | cut -d' ' -f1)
+  namespace: $ns
+spec:
+  dataSource:
+    name: $(echo $e | cut -d' ' -f5)
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - $(echo $e | cut -d' ' -f3)
+  storageClassName: $(echo $e | cut -d' ' -f4)
+  resources:
+    requests:
+      storage: $(echo $e | cut -d' ' -f2)
+EOF
+done
+
+IFS=$old_ifs
+rm /tmp/restore{1,2}.$$
+sleep 15
+
+# Scale up
+echo "==> Scaling up"
+for key in ${!replicas1[@]}; do
+  kubectl scale $key --replicas=${replicas1[${key}]} -n $ns
+done
+
+if [ "$sts" = 1 ]; then
+  for key in ${!replicas2[@]}; do
+    kubectl scale $key --replicas=${replicas2[${key}]} -n $ns
+  done
+fi
+
+if [ "$ds" = 1 ]; then
+  for key in ${!replicas3[@]}; do
+    kubectl scale $key --replicas=${replicas3[${key}]} -n $ns
+  done
+fi
+echo "==> Restore completed"
