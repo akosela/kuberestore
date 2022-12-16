@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301 USA.
 
-version=1.0
+version=1.1
 
 usage()
 {
@@ -91,7 +91,8 @@ fi
 kgp="kubectl get pvc -o name -n $ns"
 
 for e in $($kgp); do
-  kubectl get $e -n $ns | grep -v NAME | awk '{print $1,$4,$5,$6}' >> /tmp/restore1.$$
+  kubectl get $e -n $ns --show-labels | grep -v NAME |
+    awk '{print $1,$4,$5,$6,$8}' >> /tmp/restore1.$$
 done
 
 old_ifs=$IFS
@@ -138,9 +139,11 @@ kind: PersistentVolumeClaim
 metadata:
   name: $(echo $e | cut -d' ' -f1)
   namespace: $ns
+  labels:
+    $(echo $e | cut -d' ' -f5 | grep -v \<none\> | cut -d, --output-delimiter=$'\n    ' -f 1-)
 spec:
   dataSource:
-    name: $(echo $e | cut -d' ' -f5)
+    name: $(echo $e | cut -d' ' -f6)
     kind: VolumeSnapshot
     apiGroup: snapshot.storage.k8s.io
   accessModes:
