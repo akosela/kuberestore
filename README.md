@@ -9,6 +9,18 @@ GNU `coreutils`[3] while running it.
 ## install
 Copy executable to your `$PATH`.
 
+### help
+```bash
+$ kuberestore -h
+usage: kuberestore -n namespace -s snapshot
+
+Restore all PVCs in namespace from snapshots
+
+  -n namespace    namespace
+  -s snapshot     snapshot; 1 for the last, 2 for the 2nd to last, etc.
+  -h              display this help and exit
+  -v              output version information and exit
+```
 ## usage
 In order to use `kuberestore` first you need to have `kubectl` properly
 configured with the right context.
@@ -26,11 +38,9 @@ last available, 2 for the 2nd to last, etc.
 ```bash
 $ kuberestore -n test -s 1
 ```
-
 It will automatically scale down your pods, delete old PVCs, and restore them
 from snapshots. Then it will scale your pods back up. In the end you should
 have fully restored namespace.
-
 
 [1] https://kubernetes.io/docs/concepts/storage/volume-snapshots/ \
 [2] https://github.com/FairwindsOps/gemini/ \
