@@ -9,7 +9,7 @@ GNU `coreutils`[3] while running it.
 ## install
 Copy executable to your `$PATH`.
 
-### help
+## help
 ```
 $ kuberestore -h
 usage: kuberestore -n namespace -s snapshot
