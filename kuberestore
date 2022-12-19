@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301 USA.
 
-version=1.1
+version=1.2
 
 usage()
 {
@@ -140,7 +140,9 @@ metadata:
   name: $(echo $e | cut -d' ' -f1)
   namespace: $ns
   labels:
-    $(echo $e | cut -d' ' -f5 | grep -v \<none\> | cut -d, --output-delimiter=$'\n    ' -f 1-)
+    $(echo $e | cut -d' ' -f5 | grep -v \<none\> |
+      cut -d= --output-delimiter=': ' -f 1- |
+      cut -d, --output-delimiter=$'\n    ' -f 1-)
 spec:
   dataSource:
     name: $(echo $e | cut -d' ' -f6)
