@@ -1,6 +1,7 @@
-# kuberestore v1.1
+# kuberestore v1.2.1
 Restore all PVCs in namespace from snapshots. It is using `VolumeSnapshots`[1]
-which must be first deployed in your cluster, e.g. using `Gemini`[2].
+which must be first deployed in your cluster, e.g. using `snapscheduler`[2] or
+`gemini`[3].
 
 ## prerequisites
 `kuberestore` requires Bash >= 4.0. If you are on Mac it is also safer to use
@@ -43,5 +44,6 @@ from snapshots. Then it will scale your pods back up. In the end you should
 have fully restored namespace.
 
 [1] https://kubernetes.io/docs/concepts/storage/volume-snapshots/ \
+[2] https://github.com/backube/snapscheduler/ \
 [2] https://github.com/FairwindsOps/gemini/ \
 [3] https://ports.macports.org/port/coreutils/

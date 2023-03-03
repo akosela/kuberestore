@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301 USA.
 
-version=1.2
+version=1.2.1
 
 usage()
 {
@@ -98,8 +98,8 @@ done
 old_ifs=$IFS
 IFS=$'\n'
 for e in $(cat /tmp/restore1.$$); do
-  i=$(kubectl get volumesnapshot -n $ns | grep $(echo $e | cut -d' ' -f1) |
-    tail -${snap} | head -1 | cut -d' ' -f1)
+  i=$(kubectl get volumesnapshot -n $ns --sort-by=.metadata.creationTimestamp |
+    grep $(echo $e | cut -d' ' -f1) | tail -${snap} | head -1 | cut -d' ' -f1)
   echo -n $e >> /tmp/restore2.$$
   echo " $i" >> /tmp/restore2.$$
 done
