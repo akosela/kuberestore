@@ -5,7 +5,7 @@ which must be first deployed in your cluster, e.g. using `snapscheduler`[2] or
 
 ## prerequisites
 `kuberestore` requires Bash >= 4.0. If you are on Mac it is also safer to use
-GNU `coreutils`[3] while running it.
+GNU `coreutils`[4] while running it.
 
 ## install
 Copy executable to your `$PATH`.
@@ -45,5 +45,5 @@ have fully restored namespace.
 
 [1] https://kubernetes.io/docs/concepts/storage/volume-snapshots/ \
 [2] https://github.com/backube/snapscheduler/ \
-[2] https://github.com/FairwindsOps/gemini/ \
-[3] https://ports.macports.org/port/coreutils/
+[3] https://github.com/FairwindsOps/gemini/ \
+[4] https://ports.macports.org/port/coreutils/
