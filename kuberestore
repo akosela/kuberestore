@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301 USA.
 
-version=1.2.1
+version=1.2.2
 
 usage()
 {
@@ -63,12 +63,11 @@ fi
 
 if [ ! -z "$(kubectl get ds -n $ns 2>/dev/null)" ]; then
   ds=1
-  declare -A replicas3
 else
   ds=0
 fi
 
-# Store replicas for deployments, statefulsets and daemonsets
+# Store replicas for deployments and statefulsets
 declare -A replicas1
 
 for i in $(kubectl get deployment -o name -n $ns); do
@@ -78,12 +77,6 @@ done
 if [ "$sts" = 1 ]; then
   for i in $(kubectl get sts -o name -n $ns); do
     replicas2+=( [$i]="$(kubectl get $i -n $ns -o=jsonpath='{.spec.replicas}')")
-  done
-fi
-
-if [ "$ds" = 1 ]; then
-  for i in $(kubectl get ds -o name -n $ns); do
-    replicas3+=( [$i]="$(kubectl get $i -n $ns -o=jsonpath='{.spec.replicas}')")
   done
 fi
 
@@ -118,7 +111,9 @@ if [ "$sts" = 1 ]; then
 fi
 
 if [ "$ds" = 1 ]; then
-  kubectl scale daemonset --all --replicas=0 -n $ns
+  for i in $(kubectl get ds -o name -n $ns); do
+    kubectl patch $i -n $ns -p '{"spec": {"template": {"spec": {"nodeSelector": {"non-existing": "true"}}}}}'
+  done
 fi
 
 kubectl wait --for=delete pod --all -n $ns --timeout=10m
@@ -174,8 +169,8 @@ if [ "$sts" = 1 ]; then
 fi
 
 if [ "$ds" = 1 ]; then
-  for key in ${!replicas3[@]}; do
-    kubectl scale $key --replicas=${replicas3[${key}]} -n $ns
+  for i in $(kubectl get ds -o name -n $ns); do
+    kubectl patch $i -n $ns --type json -p='[{"op": "remove", "path": "/spec/template/spec/nodeSelector/non-existing"}]'
   done
 fi
 echo "==> Restore completed"

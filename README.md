@@ -1,4 +1,4 @@
-# kuberestore v1.2.1
+# kuberestore v1.2.2
 Restore all PVCs in namespace from snapshots. It is using `VolumeSnapshots`[1]
 which must be first deployed in your cluster, e.g. using `snapscheduler`[2] or
 `gemini`[3].
